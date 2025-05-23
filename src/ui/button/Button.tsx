@@ -1,5 +1,5 @@
 import { Text } from 'src/ui/text';
-
+import { SyntheticEvent } from 'react';
 import styles from './Button.module.scss';
 import { clsx } from 'clsx';
 
@@ -10,7 +10,7 @@ export const Button = ({
 	type,
 }: {
 	title: string;
-	onClick?: () => void;
+	onClick?: (e: SyntheticEvent<HTMLButtonElement>) => void;
 	htmlType?: React.ButtonHTMLAttributes<HTMLButtonElement>['type'];
 	type: 'apply' | 'clear';
 }) => {
