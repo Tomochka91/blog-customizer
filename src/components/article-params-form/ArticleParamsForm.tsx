@@ -1,4 +1,4 @@
-import { SyntheticEvent, useState, useRef } from 'react';
+import { SyntheticEvent, useState, useRef, useEffect } from 'react';
 import { ArrowButton } from 'src/ui/arrow-button';
 import { Button } from 'src/ui/button';
 import { Text } from 'src/ui/text';
@@ -16,9 +16,8 @@ import {
 import { Separator } from 'src/ui/separator';
 import { RadioGroup } from 'src/ui/radio-group';
 import clsx from 'clsx';
-
 import styles from './ArticleParamsForm.module.scss';
-import { useOutsideClickClose } from 'src/ui/select/hooks/useOutsideClickClose';
+import { useClose } from 'src/hooks/useClose';
 
 type ArticleParamsFormProps = {
 	onChangeArticle: (state: ArticleStateType) => void;
@@ -27,16 +26,15 @@ type ArticleParamsFormProps = {
 export const ArticleParamsForm = ({
 	onChangeArticle,
 }: ArticleParamsFormProps) => {
-	const [isOpen, setIsOpen] = useState(false);
+	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [formState, setFormState] =
 		useState<ArticleStateType>(defaultArticleState);
-	const rootRef = useRef<HTMLDivElement>(null);
+	const formRef = useRef<HTMLElement>(null);
 
-	useOutsideClickClose({
-		isOpen,
-		rootRef,
-		onClose: () => setIsOpen(false),
-		onChange: setIsOpen,
+	useClose({
+		isOpen: isMenuOpen,
+		onClose: () => setIsMenuOpen(false),
+		rootRef: formRef,
 	});
 
 	const handleChange = (key: keyof ArticleStateType, selected: OptionType) => {
@@ -67,15 +65,41 @@ export const ArticleParamsForm = ({
 		setFormState(defaultArticleState);
 	};
 
+	const handleSubmit = (event: SyntheticEvent) => {
+		event.preventDefault();
+		onChangeArticle(formState);
+	};
+
+	// Без полей ввода сабмит по Enter не работает. Пришлось включать принудительно и на костылях с помощью ИИ
+
+	useEffect(() => {
+		if (!isMenuOpen) return;
+
+		const handleGlobalKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Enter' && !e.shiftKey) {
+				// e.preventDefault();
+				handleSubmit(e as unknown as SyntheticEvent);
+			}
+		};
+
+		document.addEventListener('keydown', handleGlobalKeyDown);
+		return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+	}, [isMenuOpen, formState]);
+
 	return (
 		<>
-			<ArrowButton isOpen={isOpen} onClick={() => setIsOpen((open) => !open)} />
+			<ArrowButton
+				isOpen={isMenuOpen}
+				onClick={() => setIsMenuOpen((open) => !open)}
+			/>
 			<aside
-				ref={rootRef}
-				className={clsx(styles.container, { [styles.container_open]: isOpen })}>
-				{/* className={`${styles.container} ${isOpen ? styles.container_open : ''}`}> */}
+				ref={formRef}
+				className={clsx(styles.container, {
+					[styles.container_open]: isMenuOpen,
+				})}>
+				{/* className={`${styles.container} ${isMenuOpen ? styles.container_open : ''}`}> */}
 
-				<form className={styles.form}>
+				<form className={styles.form} onSubmit={handleSubmit}>
 					<Text
 						as='h2'
 						size={31}
@@ -86,6 +110,7 @@ export const ArticleParamsForm = ({
 						family='open-sans'>
 						задайте параметры
 					</Text>
+
 					<Select
 						selected={formState.fontFamilyOption}
 						options={fontFamilyOptions}
@@ -135,15 +160,7 @@ export const ArticleParamsForm = ({
 								handleResetButton();
 							}}
 						/>
-						<Button
-							title='Применить'
-							htmlType='submit'
-							type='apply'
-							onClick={(e: SyntheticEvent<HTMLButtonElement>) => {
-								e.preventDefault();
-								onChangeArticle(formState);
-							}}
-						/>
+						<Button title='Применить' htmlType='submit' type='apply' />
 					</div>
 				</form>
 			</aside>
